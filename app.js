@@ -4,8 +4,8 @@
  */
 
 var express = require('express')
-  , routes = require('./routes')
-  , user = require('./routes/user')
+  , passport = require('./lib/login')
+  , fs = require('fs')
   , http = require('http')
   , path = require('path');
 
@@ -20,6 +20,8 @@ app.configure(function(){
   app.use(express.bodyParser());
   app.use(express.cookieParser('lunch sucks'));
   app.use(express.session());
+  app.use(passport.initialize());
+  app.use(passport.session());
   app.use(app.router);
   app.use(express.static(path.join(__dirname, 'public')));
 });
@@ -28,8 +30,12 @@ app.configure('development', function(){
   app.use(express.errorHandler());
 });
 
-app.get('/', routes.index);
-app.get('/users', user.list);
+
+var routes = fs.readdirSync('./routes');
+routes.forEach(function (file) {
+  require('./routes/' + file)(app);
+});
+
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));

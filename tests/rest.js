@@ -143,7 +143,7 @@ describe('GET /api/v1/item*', function () {
       .end(done);
   });
 
-  it('returns default set of items', function (done) {
+  it('returns latest 10 items', function (done) {
     request(app)
       .get('/api/v1/items')
       .expect(200)
@@ -157,7 +157,7 @@ describe('GET /api/v1/item*', function () {
   it('returns list of items between dates', function (done) {
     request(app)
       .get('/api/v1/items')
-      .data({'query': {'key': 'added', 'start': new Date(), 'end': new Date()}})
+      .data({'query': {'key': 'added', 'sort': 'desc', 'start': new Date(), 'end': new Date()}})
       .expect(200)
       .end(function (err, res) {
         assert(res.statusCode == 200);
@@ -168,7 +168,7 @@ describe('GET /api/v1/item*', function () {
   it('returns list of items between IDs', function (done) {
     request(app)
       .get('/api/v1/items')
-      .data({'query': {'key': 'id', 'start': 1, 'end': 3}})
+      .data({'query': {'key': 'id', 'sort': 'asc', 'start': 1, 'end': 3}})
       .expect(200)
       .end(function (err, res) {
         assert(res.statusCode == 200);
@@ -275,7 +275,7 @@ describe('PUT /api/v1/user', function () {
 describe('DELETE /api/v1/user', function () {
   it('removes current user account from the system and redirects to /', function (done) {
     request(app)
-      .delete('/api/v1/user')
+      .del('/api/v1/user')
       .send({'password': 'valid'})
       .expect(302)
       .end(done);
@@ -289,12 +289,12 @@ describe('DELETE /api/v1/user', function () {
 
 
 describe('GET /api/v1/admin/item/1', function () {
-  it('returns an item with ');
+  it('returns an item with extra data - votes, rating etc');
 });
 
 
 describe('POST /api/v1/admin/item', function () {
-  it('creates a new item');
+  it('creates a new item, with image');
 });
 
 describe('PUT /api/v1/admin/item/1', function () {

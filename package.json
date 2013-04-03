@@ -7,8 +7,14 @@
     "start": "node app"
   },
   "dependencies": {
-    "express": "3.0.3",
-    "jade": "*"
+    "express": "~3.0.3",
+    "jade": "~0.28.2",
+    "passport-local": "~0.1.6",
+    "passport": "~0.1.16",
+    "passport-facebook": "~0.1.5",
+    "nconf": "~0.6.7",
+    "supertest": "~0.5.1",
+    "mongoskin": "~0.5.0"
   },
   "main": "app.js"
 }
