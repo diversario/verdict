@@ -1,0 +1,14 @@
+{
+  "name": "Verdict",
+  "author": "Ilya Shaisultanov <ilya.shaisultanov@gmail.com>",
+  "version": "0.0.1",
+  "private": false,
+  "scripts": {
+    "start": "node app"
+  },
+  "dependencies": {
+    "express": "3.0.3",
+    "jade": "*"
+  },
+  "main": "app.js"
+}
