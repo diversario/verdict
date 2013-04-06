@@ -2,63 +2,37 @@ var helpers = require('../lib/helpers')
   , async = require('async')
   , assert = require('assert')
   , db = require('mongoskin').db(helpers.getDbUri('acl'), helpers.getDbOptions())
-  , coll = db.collection('acl')
+  , aclColl = db.collection('acl')
+  , groupsColl = db.collection('groups')
   , Acl = require('../lib/models/Acl');
 
+require('./helpers/dataGenerators');
+require('./helpers/dataAccessors');
+require('./helpers/dataVerifiers');
 
-function saveFindCompare(acl, expected, done) {
-  acl.save(function (err) {
+describe('Create ACLs', function () {
+  before(function (done) {
+    db.dropDatabase(function (err) {
+      assert(!err);
+      ensureIndexes(done);
+    });
+  });
+
+  function aclCallback(err, expected, done) {
     assert(!err);
 
-    coll.findOne({type: expected.type}, function (err, doc) {
+    aclColl.find({resource: expected.resource}).toArray(function (err, docs) {
       assert(!err);
 
-      assert(Object.keys(expected).every(function (key) {
-        if (key == '_id') return true;
-        if (!Object.prototype.hasOwnProperty.call(doc, key)) return false;
-        assert.deepEqual(expected[key], doc[key]);
-        return true;
-      }));
+      assert(docs.length == 10);
 
       done();
     });
-  });
-}
-
-
-function populateCollection(done) {
-  var count = 200;
-  
-  var types = ['item', 'provider', 'admin_ui'];
-  
-  var q = async.queue(function (type, cb) {
-    var fields = {
-      type: type,
-      create: ['create_items', 'root'],
-      read: ['registered', 'root'],
-      update: ['edit_items', 'root'],
-      delete: ['remove_items', 'root'],
-      access: ['registered', 'root']
-    };
-
-    var acl = new Acl(fields);
-    acl.save(function (err) {
-      assert(!err);
-      count--;
-      cb();
-    });
-  });
-}
-
-
-describe('Create', function () {
-  before(function (done) {
-    db.dropDatabase(done);
-  });
+  }
   
   it('creates an entry in the db', function (done) {
     var fields = {
-      type: 'item',
+      resource: 'item',
       create: ['create_items', 'root'],
       read: ['registered', 'root'],
       update: ['edit_items', 'root'],
@@ -66,24 +40,26 @@ describe('Create', function () {
       access: ['registered', 'root']
     };
     
-    var acl = new Acl(fields);
-    
-    saveFindCompare(acl, fields, done);
+    Acl.createAction('item', {
+      create: ['create_items', 'root'],
+      read: ['registered', 'root'],
+      update: ['edit_items', 'root'],
+      delete: ['remove_items', 'root'],
+      access: ['registered', 'root']
+    }, function (err) {
+      aclCallback(err, fields, done);
+    });
+
   });
 
-  it('fails to create a duplicate entry', function (done) {
-    var fields = {
-      type: 'item',
+  it('fails to create duplicate entries', function (done) {
+    Acl.createAction('item', {
       create: ['create_items', 'root'],
       read: ['registered', 'root'],
       update: ['edit_items', 'root'],
       delete: ['remove_items', 'root'],
       access: ['registered', 'root']
-    };
-
-    var acl = new Acl(fields);
-
-    acl.save(function (err) {
+    }, function (err) {
       assert.equal(err.code, 11000);
       done();
     });
@@ -93,25 +69,92 @@ describe('Create', function () {
 
 
 
-describe('Read', function () {
+
+describe('Create groups', function () {
   before(function (done) {
-    db.dropDatabase(function () {
-      populateCollection(done);
+    db.dropDatabase(done);
+  });
+  
+  it('creates a new group', function (done) {
+    Acl.createGroup('dummy', ['root_user'], /* no inherited */ function (err) {
+      assert(!err);
+      
+      getGroup('dummy', function (err, group) {
+        compareGroups(
+          group,
+          {name: 'dummy', members: ['root_user'], inherits: [] }
+        );
+        
+        done();
+      });
     });
   });
 
-  it('creates an entry in the db', function (done) {
-    var fields = {
-      type: 'item',
-      create: ['create_items', 'root'],
-      read: ['registered', 'root'],
-      update: ['edit_items', 'root'],
-      delete: ['remove_items', 'root'],
-      access: ['registered', 'root']
-    };
+  it('does not create an existing group', function (done) {
+    Acl.createGroup('dummy', ['root_user'], /* no inherited */ function (err) {
+      assert(err.code, 11000);
+      done();
+    });
+  });
+});
 
-    var acl = new Acl(fields);
 
-    saveFindCompare(acl, fields, done);
+
+
+
+describe('Get groups', function () {
+  before(repopulate);
+  
+  it('inheritance', function (done) {
+    Acl.group.getWithInheritance('special', function (err, doc) {
+      console.log(err, doc);
+    });
+  });
+});
+
+
+
+
+
+
+
+
+
+describe('Query ACLs', function () {
+  before(function (done) {
+    repopulate(done);
+  });
+  
+  // see pre-populated data in helpers/dataGenerators
+  it('return all resources for which group "root" has action "access"', function (done) {
+    Acl.group.availableResources('root', 'access', function (err, resources) {
+      assert(!err);
+      assert(resources.length === 3);
+      done();
+    })
+  });
+  
+  it('check if group "registered" can "access" "users"', function (done) {
+    Acl.group.isAllowed('registered', 'users', 'access', function (err, allowed) {
+      assert(!err);
+      assert(allowed === false);
+      done();
+    })
+  });
+
+  it('check if group "root" can "access" "users"', function (done) {
+    Acl.group.isAllowed('root', 'users', 'access', function (err, allowed) {
+      assert(!err);
+      assert(allowed === true);
+      done();
+    })
+  });
+
+  it('check if group "root" can "access" "item" via inheritance', function (done) {
+    Acl.group.isAllowed('root', 'item', 'access', function (err, allowed) {
+      assert(!err);
+      assert(allowed === true);
+      done();
+    })
   });
 });
