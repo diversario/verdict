@@ -2,7 +2,7 @@ var helpers = require('../lib/helpers')
   , async = require('async')
   , assert = require('assert')
   , db = require('mongoskin').db(helpers.getDbUri('acl'), helpers.getDbOptions())
-  , aclColl = db.collection('acl')
+  , resColl = db.collection('resources')
   , groupsColl = db.collection('groups')
   , Acl = require('../lib/models/Acl');
 
@@ -21,7 +21,7 @@ describe('Create ACLs', function () {
   function aclCallback(err, expected, done) {
     assert(!err);
 
-    aclColl.find({resource: expected.resource}).toArray(function (err, docs) {
+    resColl.find({resource: expected.resource}).toArray(function (err, docs) {
       assert(!err);
 
       assert(docs.length == 10);
@@ -76,13 +76,13 @@ describe('Create groups', function () {
   });
   
   it('creates a new group', function (done) {
-    Acl.createGroup('dummy', ['root_user'], /* no inherited */ function (err) {
+    Acl.createGroup('dummy', ['root_user'], /* no includes */ function (err) {
       assert(!err);
       
       getGroup('dummy', function (err, group) {
         compareGroups(
           group,
-          {name: 'dummy', members: ['root_user'], inherits: [] }
+          {name: 'dummy', members: ['root_user'], includes: [] }
         );
         
         done();
@@ -91,7 +91,7 @@ describe('Create groups', function () {
   });
 
   it('does not create an existing group', function (done) {
-    Acl.createGroup('dummy', ['root_user'], /* no inherited */ function (err) {
+    Acl.createGroup('dummy', ['root_user'], /* no includes */ function (err) {
       assert(err.code, 11000);
       done();
     });
@@ -102,26 +102,77 @@ describe('Create groups', function () {
 
 
 
-describe('Get groups', function () {
+
+describe('Find parents', function () {
   before(repopulate);
-  
-  it('returns all inherited groups of group "special"', function (done) {
-    Acl.group.getInheritedGroups('special', function (err, groups) {
+
+  it('returns all parent groups of group "special"', function (done) {
+    Acl.group.getParents('special', function (err, groups) {
       assert(!err);
-      assert.deepEqual(groups.sort(), ['root', 'admin', 'registered'].sort());
+      assert.deepEqual(groups.sort(), ['special', 'root'].sort());
       done();
     });
   });
 
-  it('returns all groups of group "root"', function (done) {
-    Acl.group.getInheritedGroups('root', function (err, groups) {
+  it('returns all parent groups of group "root"', function (done) {
+    Acl.group.getParents('root', function (err, groups) {
       assert(!err);
-      assert.deepEqual(groups.sort(), ['admin', 'registered', 'special'].sort());
+      assert.deepEqual(groups.sort(), ['special', 'root'].sort());
       done();
     });
-  });  
+  });
+
+  it('returns all groups of group "admin"', function (done) {
+    Acl.group.getParents('admin', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['admin', 'root', 'special'].sort());
+      done();
+    });
+  });
 });
 
+
+
+
+
+
+
+
+describe('Find children', function () {
+  before(repopulate);
+
+  it('returns all children of "registered"', function (done) {
+    Acl.group.getChildren('registered', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['registered'].sort());
+      done();
+    });
+  });
+
+  it('returns all children of "root"', function (done) {
+    Acl.group.getChildren('root', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['registered', 'admin', 'root', 'special'].sort());
+      done();
+    });
+  });
+
+  it('returns all children of "special"', function (done) {
+    Acl.group.getChildren('special', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['registered', 'admin', 'root', 'special'].sort());
+      done();
+    });
+  });
+
+  it('returns all children of "admin"', function (done) {
+    Acl.group.getChildren('admin', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['registered', 'admin'].sort());
+      done();
+    });
+  });
+});
 
 
 
@@ -160,7 +211,7 @@ describe('Query ACLs', function () {
     })
   });
 
-  it('check if group "root" can "access" "item" via inheritance', function (done) {
+  it('check if group "root" can "access" "item" via inclusion', function (done) {
     Acl.group.isAllowed('root', 'item', 'access', function (err, allowed) {
       assert(!err);
       assert(allowed === true);
@@ -168,7 +219,7 @@ describe('Query ACLs', function () {
     })
   });
 
-  it('check if group "special" can "access" "item" via inheritance', function (done) {
+  it('check if group "special" can "access" "item" via inclusion', function (done) {
     Acl.group.isAllowed('special', 'item', 'access', function (err, allowed) {
       assert(!err);
       assert(allowed === true);
@@ -191,6 +242,29 @@ describe('Query ACLs', function () {
       done();
     });
   });
-  
-  
+
+
+  it('returns list of groups that have "access" to "item"', function (done) {
+    Acl.resource.whichGroups('item', 'access', function (err, list) {
+      assert(!err);
+      assert.deepEqual(list.sort(), ['admin', 'registered', 'root', 'special'].sort());
+      done();
+    });
+  });
+
+  it('returns list of groups that have "access" to "admin_ui"', function (done) {
+    Acl.resource.whichGroups('admin_ui', 'access', function (err, list) {
+      assert(!err);
+      assert.deepEqual(list.sort(), ['special', 'root', 'admin'].sort());
+      done();
+    });
+  });
+
+  it('returns list of groups that can "edit" "users"', function (done) {
+    Acl.resource.whichGroups('users', 'edit', function (err, list) {
+      assert(!err);
+      assert.deepEqual(list.sort(), ['special', 'root'].sort());
+      done();
+    });
+  });
 });

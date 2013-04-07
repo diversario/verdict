@@ -2,7 +2,7 @@ var async = require('async')
   , helpers = require('../../lib/helpers')
   , assert = require('assert')
   , db = require('mongoskin').db(helpers.getDbUri('acl'), helpers.getDbOptions())
-  , aclColl = db.collection('acl')
+  , resColl = db.collection('resources')
   , groupsColl = db.collection('groups');
 
 
@@ -20,11 +20,11 @@ global.repopulate = function (done) {
 
 
 global.ensureIndexes = function (done) {
-  aclColl.ensureIndex({resource: 1, action: 1, group: 1}, {unique: true}, function (err) {
+  resColl.ensureIndex({resource: 1, action: 1, group: 1}, {unique: true}, function (err) {
     assert(!err);
     groupsColl.ensureIndex({members: 1}, function (err) {
       assert(!err);
-      groupsColl.ensureIndex({inherits: 1}, function () {
+      groupsColl.ensureIndex({includes: 1}, function () {
         assert(!err);
         done();
       });
@@ -48,7 +48,7 @@ global.populateAcls = function populateAcls(done) {
     {
       resource: 'admin_ui',
       actions: ['access'],
-      groups: ['root']
+      groups: ['root', 'admin']
     },
     {
       resource: 'users',
@@ -77,7 +77,7 @@ global.populateAcls = function populateAcls(done) {
   });
 
   q.drain = function (err) {
-    aclColl.insert(docs, done);
+    resColl.insert(docs, done);
   }
 };
 
@@ -85,22 +85,22 @@ global.populateGroups = function populateGroups(done) {
   var groups = [
     {
       _id: 'registered',
-      inherits: [],
+      includes: [],
       members: ['user1', 'user2', 'user3']
     },
     {
       _id: 'root',
-      inherits: ['*'],//['registered', 'admin'],
+      includes: ['*'],//['registered', 'admin'],
       members: ['root']
     },
     {
       _id: 'admin',
-      inherits: ['registered'],
+      includes: ['registered'],
       members: ['administrator']
     },
     {
       _id: 'special',
-      inherits: ['root'],
+      includes: ['root'],
       members: ['cartman']
     }
   ];
