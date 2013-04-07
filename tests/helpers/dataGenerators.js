@@ -90,7 +90,7 @@ global.populateGroups = function populateGroups(done) {
     },
     {
       _id: 'root',
-      inherits: ['registered', 'admin'],
+      inherits: ['*'],//['registered', 'admin'],
       members: ['root']
     },
     {

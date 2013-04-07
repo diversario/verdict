@@ -105,11 +105,21 @@ describe('Create groups', function () {
 describe('Get groups', function () {
   before(repopulate);
   
-  it('inheritance', function (done) {
-    Acl.group.getWithInheritance('special', function (err, doc) {
-      console.log(err, doc);
+  it('returns all inherited groups of group "special"', function (done) {
+    Acl.group.getInheritedGroups('special', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['root', 'admin', 'registered'].sort());
+      done();
     });
   });
+
+  it('returns all groups of group "root"', function (done) {
+    Acl.group.getInheritedGroups('root', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['admin', 'registered', 'special'].sort());
+      done();
+    });
+  });  
 });
 
 
@@ -157,4 +167,30 @@ describe('Query ACLs', function () {
       done();
     })
   });
+
+  it('check if group "special" can "access" "item" via inheritance', function (done) {
+    Acl.group.isAllowed('special', 'item', 'access', function (err, allowed) {
+      assert(!err);
+      assert(allowed === true);
+      done();
+    })
+  });
+  
+  it('returns "root" group', function (done) {
+    Acl.group.get("root", function (err, list) {
+      assert(!err);
+      assert(list._id == 'root');
+      done();
+    });
+  });
+  
+  it('returns a list of all defined groups', function (done) {
+    Acl.group.get(function (err, list) {
+      assert(!err);
+      assert(list.length == 4);
+      done();
+    });
+  });
+  
+  
 });
