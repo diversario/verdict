@@ -129,6 +129,14 @@ describe('Find parents', function () {
       done();
     });
   });
+
+  it('returns all parent groups of group "circular1" and does not loop forever', function (done) {
+    Acl.group.getParents('circular1', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['circular1', 'circular2', 'root', 'special'].sort());
+      done();
+    });
+  });
 });
 
 
@@ -152,7 +160,7 @@ describe('Find children', function () {
   it('returns all children of "root"', function (done) {
     Acl.group.getChildren('root', function (err, groups) {
       assert(!err);
-      assert.deepEqual(groups.sort(), ['registered', 'admin', 'root', 'special'].sort());
+      assert.deepEqual(groups.sort(), ['registered', 'admin', 'root', 'special', 'circular1', 'circular2'].sort());
       done();
     });
   });
@@ -160,7 +168,7 @@ describe('Find children', function () {
   it('returns all children of "special"', function (done) {
     Acl.group.getChildren('special', function (err, groups) {
       assert(!err);
-      assert.deepEqual(groups.sort(), ['registered', 'admin', 'root', 'special'].sort());
+      assert.deepEqual(groups.sort(), ['registered', 'admin', 'root', 'special', 'circular1', 'circular2'].sort());
       done();
     });
   });
@@ -169,6 +177,14 @@ describe('Find children', function () {
     Acl.group.getChildren('admin', function (err, groups) {
       assert(!err);
       assert.deepEqual(groups.sort(), ['registered', 'admin'].sort());
+      done();
+    });
+  });
+
+  it('returns all children of "circular1"', function (done) {
+    Acl.group.getChildren('circular1', function (err, groups) {
+      assert(!err);
+      assert.deepEqual(groups.sort(), ['circular1', 'circular2'].sort());
       done();
     });
   });
@@ -238,7 +254,12 @@ describe('Query ACLs', function () {
   it('returns a list of all defined groups', function (done) {
     Acl.group.get(function (err, list) {
       assert(!err);
-      assert(list.length == 4);
+      assert(list.length == TOTAL_GROUPS);
+      assert(
+        list.every(function (item) {
+          return GROUPS.indexOf(item._id) !== -1;
+        })
+      );
       done();
     });
   });

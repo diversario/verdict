@@ -90,7 +90,7 @@ global.populateGroups = function populateGroups(done) {
     },
     {
       _id: 'root',
-      includes: ['*'],//['registered', 'admin'],
+      includes: ['*'],
       members: ['root']
     },
     {
@@ -102,8 +102,23 @@ global.populateGroups = function populateGroups(done) {
       _id: 'special',
       includes: ['root'],
       members: ['cartman']
+    },
+    {
+      _id: 'circular1',
+      includes: ['circular2'],
+      members: []
+    },
+    {
+      _id: 'circular2',
+      includes: ['circular1'],
+      members: []
     }
   ];
+  
+  global.TOTAL_GROUPS = groups.length;
+  global.GROUPS = groups.map(function (group) {
+    return group._id;
+  });
 
   groupsColl.insert(groups, done);
 };
