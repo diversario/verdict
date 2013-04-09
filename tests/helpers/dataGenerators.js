@@ -57,6 +57,10 @@ global.populateAcls = function populateAcls(done) {
     }
   ];
 
+  global.RESOURCES = acls.map(function(res){
+    return res.resource;
+  });
+  
   var docs = [];
 
   var q = async.queue(function (aclSet, cb) {

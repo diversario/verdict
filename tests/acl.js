@@ -40,7 +40,7 @@ describe('Create ACLs', function () {
       access: ['registered', 'root']
     };
     
-    Acl.createAction('item', {
+    Acl.addResource('item', {
       create: ['create_items', 'root'],
       read: ['registered', 'root'],
       update: ['edit_items', 'root'],
@@ -53,7 +53,7 @@ describe('Create ACLs', function () {
   });
 
   it('fails to create duplicate entries', function (done) {
-    Acl.createAction('item', {
+    Acl.addResource('item', {
       create: ['create_items', 'root'],
       read: ['registered', 'root'],
       update: ['edit_items', 'root'],
@@ -76,7 +76,7 @@ describe('Create groups', function () {
   });
   
   it('creates a new group', function (done) {
-    Acl.createGroup('dummy', ['root_user'], /* no includes */ function (err) {
+    Acl.addGroup('dummy', ['root_user'], /* no includes */ function (err) {
       assert(!err);
       
       getGroup('dummy', function (err, group) {
@@ -91,7 +91,7 @@ describe('Create groups', function () {
   });
 
   it('does not create an existing group', function (done) {
-    Acl.createGroup('dummy', ['root_user'], /* no includes */ function (err) {
+    Acl.addGroup('dummy', ['root_user'], /* no includes */ function (err) {
       assert(err.code, 11000);
       done();
     });
@@ -207,6 +207,11 @@ describe('Query ACLs', function () {
     Acl.group.availableResources('root', 'access', function (err, resources) {
       assert(!err);
       assert(resources.length === 3);
+      assert(
+        resources.every(function (item) {
+          return RESOURCES.indexOf(item) !== -1;
+        })
+      );
       done();
     })
   });
@@ -264,7 +269,6 @@ describe('Query ACLs', function () {
     });
   });
 
-
   it('returns list of groups that have "access" to "item"', function (done) {
     Acl.resource.whichGroups('item', 'access', function (err, list) {
       assert(!err);
@@ -288,4 +292,18 @@ describe('Query ACLs', function () {
       done();
     });
   });
+
+  it('returns a resource', function (done) {
+    Acl.resource.get('item', function (err, list) {
+      assert(!err);
+      assert(list.length == TOTAL_GROUPS);
+      assert(
+        list.every(function (item) {
+          return GROUPS.indexOf(item._id) !== -1;
+        })
+      );
+      done();
+    });
+  });
+
 });
