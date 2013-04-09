@@ -57,7 +57,9 @@ global.populateAcls = function populateAcls(done) {
     }
   ];
 
-  global.RESOURCES = acls.map(function(res){
+  global.RESOURCES = acls;
+  
+  global.RESOURCES_LIST = acls.map(function(res){
     return res.resource;
   });
   

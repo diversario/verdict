@@ -209,7 +209,7 @@ describe('Query ACLs', function () {
       assert(resources.length === 3);
       assert(
         resources.every(function (item) {
-          return RESOURCES.indexOf(item) !== -1;
+          return RESOURCES_LIST.indexOf(item) !== -1;
         })
       );
       done();
@@ -296,12 +296,18 @@ describe('Query ACLs', function () {
   it('returns a resource', function (done) {
     Acl.resource.get('item', function (err, list) {
       assert(!err);
-      assert(list.length == TOTAL_GROUPS);
-      assert(
-        list.every(function (item) {
-          return GROUPS.indexOf(item._id) !== -1;
-        })
-      );
+      assert(list.resource == 'item');
+      
+      var items = RESOURCES.filter(function (item) {
+        if (item.resource == 'item') return item;
+      });
+      
+      items.forEach(function (item) {
+        item.actions.forEach(function (action) {
+          assert.deepEqual(list[action].sort(), item.groups.sort());
+        });
+      });
+      
       done();
     });
   });
