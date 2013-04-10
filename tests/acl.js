@@ -4,7 +4,7 @@ var helpers = require('../lib/helpers')
   , db = require('mongoskin').db(helpers.getDbUri('acl'), helpers.getDbOptions())
   , resColl = db.collection('resources')
   , groupsColl = db.collection('groups')
-  , Acl = require('../lib/models/Acl');
+  , Acl = require('../lib/acl');
 
 
 /**

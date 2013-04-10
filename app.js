@@ -4,7 +4,7 @@
  */
 
 var express = require('express')
-  , passport = require('./lib/login')
+  , passport = require('./lib/auth')
   , fs = require('fs')
   , http = require('http')
   , path = require('path');
