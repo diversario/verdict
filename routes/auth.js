@@ -1,5 +1,5 @@
 var passport = require('../lib/login')
-  , conf = require('../config.private');
+  , conf = require('../conf');
 
 function attach(app) {
   app.get('/auth/facebook', passport.authenticate('facebook'));

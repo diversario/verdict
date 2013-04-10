@@ -6,11 +6,19 @@ var helpers = require('../lib/helpers')
   , groupsColl = db.collection('groups')
   , Acl = require('../lib/models/Acl');
 
+
+/**
+ * Adds global helper methods.
+ */
 require('./helpers/dataGenerators');
 require('./helpers/dataAccessors');
 require('./helpers/dataVerifiers');
 
-describe('Create ACLs', function () {
+
+
+
+
+describe('Create resources', function () {
   before(function (done) {
     db.dropDatabase(function (err) {
       assert(!err);
@@ -40,7 +48,7 @@ describe('Create ACLs', function () {
       access: ['registered', 'root']
     };
     
-    Acl.addResource('item', {
+    Acl.resource.add('item', {
       create: ['create_items', 'root'],
       read: ['registered', 'root'],
       update: ['edit_items', 'root'],
@@ -52,21 +60,62 @@ describe('Create ACLs', function () {
 
   });
 
-  it('fails to create duplicate entries', function (done) {
-    Acl.addResource('item', {
-      create: ['create_items', 'root'],
-      read: ['registered', 'root'],
-      update: ['edit_items', 'root'],
-      delete: ['remove_items', 'root'],
-      access: ['registered', 'root']
-    }, function (err) {
-      assert.equal(err.code, 11000);
-      done();
+  it('does not create duplicate entries', function (done) {
+    resColl.count({}, function (err, countBefore) {
+      Acl.resource.add('item', {
+        delete: ['remove_items', 'root'],
+        access: ['registered', 'root']
+      }, function (err) {
+        assert(!err);
+        resColl.count({}, function (err, countAfter) {
+          assert(countBefore == countAfter);
+          done();
+        });
+      });
     });
   });
 });
 
 
+
+
+describe('Edit resources', function () {
+  beforeEach(repopulate);
+  
+  it('removes group from resource', function (done) {
+    Acl.resource.remove('item', 'delete', 'root', function (err) {
+      assert(!err);
+      
+      shouldNotExist(resColl, {
+        'resource': 'item',
+        'action': 'delete',
+        'group': 'root'
+      }, done);
+    });
+  });
+
+  it('removes action from resource', function (done) {
+    Acl.resource.remove('item', 'edit', function (err) {
+      assert(!err);
+      
+      shouldNotExist(resColl, {
+        'resource': 'item',
+        'action': 'edit'
+      }, done);
+    });
+  });
+
+  it('removes resource', function (done) {
+    Acl.resource.remove('item', function (err) {
+      assert(!err);
+
+      shouldNotExist(resColl, {
+        'resource': 'item'
+      }, done);
+    });
+  });
+
+});
 
 
 
@@ -76,7 +125,7 @@ describe('Create groups', function () {
   });
   
   it('creates a new group', function (done) {
-    Acl.addGroup('dummy', ['root_user'], /* no includes */ function (err) {
+    Acl.group.add('dummy', ['root_user'], /* no includes */ function (err) {
       assert(!err);
       
       getGroup('dummy', function (err, group) {
@@ -91,14 +140,107 @@ describe('Create groups', function () {
   });
 
   it('does not create an existing group', function (done) {
-    Acl.addGroup('dummy', ['root_user'], /* no includes */ function (err) {
-      assert(err.code, 11000);
+    Acl.group.add('dummy', ['root_user'], /* no includes */ function (err) {
+      assert(err.code, 'DUPLICATE_GROUP');
+      done();
+    });
+  });
+
+  it('creates a group "group.name"', function (done) {
+    Acl.group.add('group.name', ['root_user'], /* no includes */ function (err) {
+      assert(!err);
       done();
     });
   });
 });
 
 
+
+
+
+describe('Remove groups', function () {
+  before(repopulate);
+  
+  it('removes group from acl and groups collections', function (done) {
+    Acl.group.remove('root', function (err) {
+      assert(!err);
+      
+      async.parallel([
+        function (cb) {
+          getGroup('root', function (err, group) {
+            assert(!err);
+            assert(!group);
+            cb();
+          });
+        },
+        function (cb) {
+          resColl.count({'group': 'root'}, function (err, result) {
+            assert(!err);
+            assert(result == 0);
+            cb();
+          });
+        },
+        function (cb) {
+          groupsColl.count({includes: {$in: ['root']}}, function (err, result) {
+            assert(!err);
+            assert(result == 0);
+            cb();
+          });
+        }
+      ],
+      function (err) {
+        assert(!err);
+        done();
+      });
+    });
+  });
+});
+
+
+
+
+describe('Edit groups', function () {
+  before(repopulate);
+  
+  it('add a user to a group', function (done) {
+    Acl.group.addUser('registered', 'USER1', function (err, updated) {
+      assert(!err);
+      
+      getGroup('registered', function (err, group) {
+        assert(!err);
+        assert(group.members.indexOf('USER1') !== -1);
+        done();
+      });
+    });
+  });
+
+  it('fails to add user to nonexistent group', function (done) {
+    Acl.group.addUser('imaginary', 'USER2', function (err, updated) {
+      assert(err.code == 'MISSING_GROUP');
+      done();
+    });
+  });
+
+  it('removes user from a group', function (done) {
+    Acl.group.removeUser('admin', 'administrator', function (err, updated) {
+      getGroup('admin', function (err, group) {
+        assert(!err);
+        assert(group.members.indexOf('administrator') === -1);
+        done();
+      });
+    });
+  });
+
+  it('removes nonexistent user from a group', function (done) {
+    Acl.group.removeUser('admin', 'administrator_nope', function (err, updated) {
+      getGroup('admin', function (err, group) {
+        assert(!err);
+        assert(group.members.indexOf('administrator_nope') === -1);
+        done();
+      });
+    });
+  });
+});
 
 
 

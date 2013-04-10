@@ -5,3 +5,11 @@ global.compareGroups = function (actual, expected) {
   assert.deepEqual(actual.members, expected.members);
   assert.deepEqual(actual.includes, expected.includes);
 };
+
+global.shouldNotExist = function (coll, query, cb) {
+  coll.count(query, function (err, count) {
+    assert(!err);
+    assert(count === 0);
+    cb();
+  })
+};
