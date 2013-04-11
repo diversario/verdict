@@ -13,3 +13,11 @@ global.shouldNotExist = function (coll, query, cb) {
     cb();
   })
 };
+
+global.compareProducts = function (actual, expected) {
+  Object.keys(actual).forEach(function (key) {
+    if (key == 'rating') return;
+    if (key == '_id') assert.strictEqual(actual._id, expected.id);
+    else assert.strictEqual(actual[key], expected[key]);
+  });
+};
