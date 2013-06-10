@@ -1,35 +1,22 @@
-TESTS = tests/*.js
-REPORTER = dot
+REPORTER = spec
 
 test:
-	@COVERAGE_VERDICT=
-	@NODE_ENV=test mocha \
-		--reporter $(REPORTER) \
-		--timeout 0 \
-		--growl \
-		$(TESTS)
+	@mocha --reporter $(REPORTER)
 
-test-watch:
-	@NODE_ENV=test mocha \
-		--reporter $(REPORTER) \
-		--timeout 0 \
-		--growl \
-		--watch \
-		$(TESTS)
-
-test-coverage: lib-coverage
-	@mkdir -p build/coverage
-	@COVERAGE_VERDICT=1 $(MAKE) test REPORTER=html-cov > build/coverage/index.html
-
-lib-coverage:
+coverage:
+	@$(MAKE) clean
+	@mkdir reports
+	@istanbul instrument --output lib-cov lib
+	@ISTANBUL_REPORTERS=lcov CONNECT_MONGOSTORE_COV=1 mocha -R mocha-istanbul -t 20s $(TESTS)
+	@mv lcov.info reports
+	@mv lcov-report reports
 	@rm -rf lib-cov
-	@jscoverage lib lib-cov
 
-docs:
-	@mkdir -p build/api
-	@yuidoc
+coveralls: test coverage
+	@cat reports/lcov.info | ./node_modules/coveralls/bin/coveralls.js
+	@$(MAKE) clean
 
 clean:
-	@rm -rf lib-cov build
+	@rm -rf lib-cov reports
 
-.PHONY: test test-watch
+.PHONY: test test-cov coverage
